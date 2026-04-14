@@ -1,0 +1,21 @@
+{
+  "password": "mirror123",
+  "idle_timeout": 600,
+  "platforms": {
+    "custom": {
+      "color": "#888",
+      "login_url": "https://example.com/login",
+      "login_patterns": ["/login", "/signin"]
+    }
+  },
+  "profiles": {
+    "demo": {
+      "name": "Demo Browser",
+      "port": 9500,
+      "platform": "custom",
+      "url": "https://example.com",
+      "account": "",
+      "password": ""
+    }
+  }
+}
