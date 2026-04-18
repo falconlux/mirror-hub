@@ -1,0 +1,101 @@
+[
+  {
+    "name": "Mac-Pro-M1",
+    "screen": {
+      "width": 1440,
+      "height": 900
+    },
+    "window": "1440,855",
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "MacIntel",
+    "webgl_vendor": "Apple",
+    "webgl_renderer": "Apple M1",
+    "cores": 8,
+    "memory": 16,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en"
+    ]
+  },
+  {
+    "name": "Mac-Air-M2",
+    "screen": {
+      "width": 1470,
+      "height": 956
+    },
+    "window": "1470,911",
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "MacIntel",
+    "webgl_vendor": "Apple",
+    "webgl_renderer": "Apple M2",
+    "cores": 8,
+    "memory": 8,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "en"
+    ]
+  },
+  {
+    "name": "Mac-Pro-M3",
+    "screen": {
+      "width": 1512,
+      "height": 982
+    },
+    "window": "1512,937",
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "platform": "MacIntel",
+    "webgl_vendor": "Apple",
+    "webgl_renderer": "Apple M3",
+    "cores": 8,
+    "memory": 16,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en-US",
+      "en"
+    ]
+  },
+  {
+    "name": "Mac-Studio-M2Ultra",
+    "screen": {
+      "width": 2560,
+      "height": 1440
+    },
+    "window": "2560,1395",
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "platform": "MacIntel",
+    "webgl_vendor": "Apple",
+    "webgl_renderer": "Apple M2 Ultra",
+    "cores": 24,
+    "memory": 32,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh"
+    ]
+  },
+  {
+    "name": "Mac-Mini-M4",
+    "screen": {
+      "width": 1920,
+      "height": 1080
+    },
+    "window": "1920,1035",
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "MacIntel",
+    "webgl_vendor": "Apple",
+    "webgl_renderer": "Apple M4",
+    "cores": 10,
+    "memory": 16,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en"
+    ]
+  }
+]

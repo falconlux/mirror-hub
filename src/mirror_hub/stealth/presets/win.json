@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Win10-1080p-GTX1060",
+    "screen": {
+      "width": 1920,
+      "height": 1080
+    },
+    "window": "1920,1040",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "webgl_vendor": "Google Inc. (NVIDIA)",
+    "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 6GB Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "cores": 8,
+    "memory": 8,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en-US",
+      "en"
+    ]
+  },
+  {
+    "name": "Win11-1440p-RTX3060",
+    "screen": {
+      "width": 2560,
+      "height": 1440
+    },
+    "window": "2560,1400",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "webgl_vendor": "Google Inc. (NVIDIA)",
+    "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "cores": 12,
+    "memory": 16,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh"
+    ]
+  },
+  {
+    "name": "Win10-1080p-AMD",
+    "screen": {
+      "width": 1920,
+      "height": 1080
+    },
+    "window": "1920,1040",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "webgl_vendor": "Google Inc. (AMD)",
+    "webgl_renderer": "ANGLE (AMD, AMD Radeon RX 580 Series Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "cores": 6,
+    "memory": 8,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en-US"
+    ]
+  },
+  {
+    "name": "Win11-1080p-RTX4060",
+    "screen": {
+      "width": 1920,
+      "height": 1080
+    },
+    "window": "1920,1040",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "webgl_vendor": "Google Inc. (NVIDIA)",
+    "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "cores": 16,
+    "memory": 16,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en"
+    ]
+  },
+  {
+    "name": "Win10-768p-Intel",
+    "screen": {
+      "width": 1366,
+      "height": 768
+    },
+    "window": "1366,728",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "webgl_vendor": "Google Inc. (Intel)",
+    "webgl_renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "cores": 4,
+    "memory": 8,
+    "timezone": "Asia/Shanghai",
+    "languages": [
+      "zh-CN",
+      "zh",
+      "en-US",
+      "en"
+    ]
+  }
+]

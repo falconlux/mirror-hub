@@ -411,6 +411,11 @@ class HubHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
 
     def _check_auth(self):
+        # Bearer token (for SDK/API clients)
+        auth = self.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            return auth[7:] == _AUTH_TOKEN
+        # Cookie (for browser UI)
         cookie_str = self.headers.get('Cookie', '')
         cookies = http.cookies.SimpleCookie(cookie_str)
         return cookies.get('mirror_token') and cookies['mirror_token'].value == _AUTH_TOKEN
@@ -466,6 +471,8 @@ class HubHandler(BaseHTTPRequestHandler):
             self._serve_screenshot(profile_id)
         elif action == 'status':
             self._serve_status(profile_id)
+        elif action == 'cdp':
+            self._serve_cdp(profile_id)
         elif action == '' or action == 'index.html':
             self._serve_viewer(profile_id)
         else:
@@ -515,6 +522,14 @@ class HubHandler(BaseHTTPRequestHandler):
 
         if action == 'restart':
             self._restart_browser(profile_id)
+            return
+
+        if action == 'launch':
+            self._launch_profile(profile_id)
+            return
+
+        if action == 'stop':
+            self._stop_profile(profile_id)
             return
 
         try:
@@ -568,6 +583,43 @@ class HubHandler(BaseHTTPRequestHandler):
             os.system(f"pkill -f 'remote-debugging-port={port}' 2>/dev/null")
             time.sleep(2)
             launch_chrome(profile_id, port)
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _serve_cdp(self, profile_id):
+        """GET /<profile_id>/cdp — return CDP connection info for SDK clients."""
+        cfg = PROFILES[profile_id]
+        port = cfg['port']
+        self._json_response(200, {
+            'profile_id': profile_id,
+            'port': port,
+            'cdp_url': f'http://127.0.0.1:{port}',
+            'alive': cdp_alive(port),
+            'platform': cfg.get('platform', ''),
+            'fingerprint_index': cfg.get('fingerprint_index', 0),
+        })
+
+    def _launch_profile(self, profile_id):
+        """POST /<profile_id>/launch — start Chrome for the profile (async, idempotent)."""
+        cfg = PROFILES[profile_id]
+        port = cfg['port']
+        if cdp_alive(port):
+            self._json_response(200, {'ok': True, 'already_running': True, 'port': port})
+            return
+        self._json_response(202, {'ok': True, 'starting': True, 'port': port})
+        threading.Thread(target=lambda: launch_chrome(profile_id, port), daemon=True).start()
+
+    def _stop_profile(self, profile_id):
+        """POST /<profile_id>/stop — kill Chrome for the profile, clean up connections."""
+        cfg = PROFILES[profile_id]
+        port = cfg['port']
+        self._json_response(200, {'ok': True})
+        def _do():
+            if profile_id in _pages: del _pages[profile_id]
+            if profile_id in _pws:
+                try: run_async(_pws[profile_id].stop())
+                except: pass
+                del _pws[profile_id]
+            os.system(f"pkill -f 'remote-debugging-port={port}' 2>/dev/null")
         threading.Thread(target=_do, daemon=True).start()
 
     def _serve_screenshot(self, profile_id):
