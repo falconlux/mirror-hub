@@ -161,7 +161,50 @@ try {{
     }})}});
 }} catch(e) {{}}
 
-// 14. 清理 Playwright 泄露
+// 14. 时区（Intl 层 override，真正的 timezone 切换靠 CDP Emulation.setTimezoneOverride）
+try {{
+    const TZ = '{fp.get("timezone", "Asia/Shanghai")}';
+    const _OrigDTF = Intl.DateTimeFormat;
+    function _PatchedDTF(...args) {{
+        if (!(this instanceof _PatchedDTF)) return new _PatchedDTF(...args);
+        if (args.length < 2) args.push({{}});
+        if (!args[1].timeZone) args[1].timeZone = TZ;
+        return new _OrigDTF(...args);
+    }}
+    _PatchedDTF.prototype = _OrigDTF.prototype;
+    _PatchedDTF.supportedLocalesOf = _OrigDTF.supportedLocalesOf;
+    Intl.DateTimeFormat = _PatchedDTF;
+}} catch(e) {{}}
+
+// 15. Client Hints (sec-ch-ua-*) — 新版风控读这些 header 判定平台一致性
+try {{
+    if (navigator.userAgentData) {{
+        const UA_DATA = {{
+            brands: [
+                {{brand: 'Chromium', version: '{fp["ua"].split("Chrome/")[1].split(".")[0] if "Chrome/" in fp["ua"] else "136"}'}},
+                {{brand: 'Google Chrome', version: '{fp["ua"].split("Chrome/")[1].split(".")[0] if "Chrome/" in fp["ua"] else "136"}'}},
+                {{brand: 'Not.A/Brand', version: '99'}},
+            ],
+            mobile: false,
+            platform: 'Windows',
+        }};
+        Object.defineProperty(navigator.userAgentData, 'brands', {{get: () => UA_DATA.brands}});
+        Object.defineProperty(navigator.userAgentData, 'mobile', {{get: () => UA_DATA.mobile}});
+        Object.defineProperty(navigator.userAgentData, 'platform', {{get: () => UA_DATA.platform}});
+        const origHEV = navigator.userAgentData.getHighEntropyValues.bind(navigator.userAgentData);
+        navigator.userAgentData.getHighEntropyValues = function(hints) {{
+            return origHEV(hints).then(data => Object.assign(data, {{
+                platform: 'Windows', platformVersion: '15.0.0', architecture: 'x86', bitness: '64',
+                model: '', uaFullVersion: '{fp["ua"].split("Chrome/")[1].split(" ")[0] if "Chrome/" in fp["ua"] else "136.0.0.0"}',
+                fullVersionList: UA_DATA.brands.map(b => ({{brand: b.brand, version: '{fp["ua"].split("Chrome/")[1].split(" ")[0] if "Chrome/" in fp["ua"] else "136.0.0.0"}'}})),
+                brands: UA_DATA.brands,
+                mobile: false,
+            }}));
+        }};
+    }}
+}} catch(e) {{}}
+
+// 16. 清理 Playwright 泄露
 try {{ delete window.__pwInitScripts; }} catch(e) {{}}
 try {{ delete window.__playwright__binding__; }} catch(e) {{}}
 setTimeout(() => {{
