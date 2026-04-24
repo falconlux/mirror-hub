@@ -17,24 +17,43 @@ from pathlib import Path
 _PRESET_DIR = Path(__file__).parent / "presets"
 
 
-def _load_presets_for_current_os() -> list[dict]:
-    if _sys.platform == "darwin":
-        fname = "mac.json"
-    elif _sys.platform == "win32":
-        fname = "win.json"
-    else:
-        # Linux 服务器用 Win 预设（反检测靠 UA 伪装，真实 Linux UA 反而可疑）
-        fname = "win.json"
+def _load_presets(os_kind: str) -> list[dict]:
+    fname = {"mac": "mac.json", "win": "win.json"}.get(os_kind, "win.json")
     with open(_PRESET_DIR / fname, encoding="utf-8") as f:
         return json.load(f)
 
 
-FINGERPRINT_PRESETS: list[dict] = _load_presets_for_current_os()
+def _default_os_kind() -> str:
+    if _sys.platform == "darwin":
+        return "mac"
+    # Linux/Win 脚本默认用 Win 预设（伪装 Linux 太可疑）
+    return "win"
 
 
-def get_fingerprint(profile_index: int) -> dict:
-    """按 profile_index 取指纹（对预设数量取模循环）。"""
-    return FINGERPRINT_PRESETS[profile_index % len(FINGERPRINT_PRESETS)]
+# 默认用运行脚本的 OS 选预设（向后兼容）
+FINGERPRINT_PRESETS: list[dict] = _load_presets(_default_os_kind())
+
+
+def get_fingerprint(profile_index: int, os_kind: str | None = None) -> dict:
+    """按 profile_index 取指纹（对预设数量取模循环）。
+
+    Args:
+        profile_index: 索引
+        os_kind: 'mac' 或 'win'。None 时用运行脚本的 OS（旧行为）。
+            当本地脚本连接的是**伪装成另一 OS 的远程 Chrome**（如 Mac 本地
+            连 Linux GPU 上跑的 Win-伪装 Chrome），传 os_kind='win' 强制匹配，
+            否则 stealth JS 会和 Chrome 真实 UA 冲突，被淘宝风控识破。
+    """
+    presets = _load_presets(os_kind) if os_kind else FINGERPRINT_PRESETS
+    return presets[profile_index % len(presets)]
+
+
+def guess_os_kind_from_ua(ua: str) -> str:
+    """从 UA 字符串推断应该用哪套预设。"""
+    ua_lower = ua.lower()
+    if "mac" in ua_lower or "darwin" in ua_lower:
+        return "mac"
+    return "win"
 
 
 def generate_stealth_js(fp: dict) -> str:
