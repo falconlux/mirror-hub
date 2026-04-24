@@ -49,10 +49,18 @@ def get_fingerprint(profile_index: int, os_kind: str | None = None) -> dict:
 
 
 def guess_os_kind_from_ua(ua: str) -> str:
-    """从 UA 字符串推断应该用哪套预设。"""
-    ua_lower = ua.lower()
+    """从 UA 字符串推断应该用哪套预设。
+
+    Linux UA 显式返回 'win'—伪装 Linux 会暴露服务器特征（字体/GPU/缺桌面 API
+    等），用 win 预设反检测更稳。空/未知 UA 也回退 win。
+    """
+    ua_lower = (ua or "").lower()
     if "mac" in ua_lower or "darwin" in ua_lower:
         return "mac"
+    if "linux" in ua_lower or "x11" in ua_lower:
+        # caller 忘了给 Chrome 传 --user-agent，暴露真实 Linux UA——
+        # 用 win 预设，由 stealth JS 把 navigator.userAgent 覆盖成 Windows
+        return "win"
     return "win"
 
 

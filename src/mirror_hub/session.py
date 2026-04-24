@@ -43,7 +43,7 @@ class BrowserSession:
         fingerprint_index: int = 0,
         stealth: bool = True,
         label: str = "",
-        reload_on_connect: bool = True,
+        reload_on_connect: bool = False,
         fingerprint_override: dict | None = None,
     ):
         """
@@ -52,18 +52,27 @@ class BrowserSession:
             fingerprint_index: which fingerprint preset to inject (usually from hub)
             stealth: inject stealth.js on connect (default True)
             label: log prefix for identification
-            reload_on_connect: reload the existing page once so stealth init-scripts
-                actually apply to it. Playwright's add_init_script only affects pages
-                loaded *after* injection — without this, pre-existing pages keep their
-                raw fingerprint (Linux platform, 40 cores, en-US), which Taobao uses
-                to silently block search API. Default True. Set False for workflows
-                that must preserve in-page state (forms, scroll, etc.).
+            reload_on_connect: whether to reload the existing page once so the
+                stealth init-script applies to its current document. Playwright's
+                `add_init_script` registers the script on all pages but it only
+                runs on the *next* navigation/reload — without this, the page
+                used for QR login keeps its raw navigator (Linux platform, 40
+                cores, en-US), which Taobao uses to silently block search API.
+                Default **False** to preserve caller state (forms, pending XHR,
+                WebSocket). Callers that control the page lifecycle and need
+                stealth to apply immediately (scrapers that connect and
+                immediately goto) should set True.
             fingerprint_override: explicit fingerprint dict (same shape as
-                FINGERPRINT_PRESETS entries). When provided, bypasses
-                `fingerprint_index`. Use this when the Chrome process was launched
-                with a different preset than the SDK defaults — mismatched stealth
-                (Chrome=Windows, stealth JS=Mac) gets flagged by Taobao's risk control.
+                FINGERPRINT_PRESETS entries, must include "name" and "ua").
+                When provided, bypasses `fingerprint_index`. Use this when the
+                Chrome process was launched with a different preset than the
+                SDK defaults — mismatched stealth (Chrome=Windows, stealth
+                JS=Mac) gets flagged by Taobao's risk control.
         """
+        if fingerprint_override is not None:
+            missing = [k for k in ("name", "ua", "platform") if k not in fingerprint_override]
+            if missing:
+                raise ValueError(f"fingerprint_override 缺少字段: {missing}")
         self.cdp_url = cdp_url
         self.fingerprint_index = fingerprint_index
         self.fingerprint_override = fingerprint_override
@@ -109,9 +118,10 @@ class BrowserSession:
                     fp = self.fingerprint_override
                 else:
                     # 按 Chrome 原始 UA 选预设，避免跨 OS 指纹冲突。
-                    # 必须走 CDP Browser.getVersion，不能用 page.evaluate(navigator.userAgent)
-                    # —— 后者可能被本次或之前的 stealth JS 注入过，拿到的是伪装后的 UA。
+                    # 走 CDP Browser.getVersion，而不是 page.evaluate(navigator.userAgent)
+                    # —— 后者可能被 stealth JS 注入过，拿到伪装后的 UA。
                     os_kind = None
+                    real_ua = ""
                     try:
                         cdp = await self._context.new_cdp_session(self._page)
                         try:
@@ -119,29 +129,26 @@ class BrowserSession:
                             real_ua = info.get("userAgent", "")
                             os_kind = guess_os_kind_from_ua(real_ua)
                         finally:
-                            await cdp.detach()
-                    except Exception:
-                        pass
-                    fp = get_fingerprint(self.fingerprint_index, os_kind=os_kind)
-                stealth_js = generate_stealth_js(fp)
-                # 1) 对未来新 page 生效（Playwright 层）
-                await self._context.add_init_script(stealth_js)
-                # 2) 对当前 target 也注册 init script（CDP 层，覆盖现有 page 的后续 navigate/reload）
-                try:
-                    cdp = await self._context.new_cdp_session(self._page)
-                    try:
-                        await cdp.send(
-                            "Page.addScriptToEvaluateOnNewDocument",
-                            {"source": stealth_js},
+                            try:
+                                await cdp.detach()
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        logger.warning(
+                            f"[{self.label}] Browser.getVersion 失败，回退本地脚本 OS 预设: {e}"
                         )
-                    finally:
-                        await cdp.detach()
-                except Exception as e:
-                    logger.debug(f"[{self.label}] CDP addScriptToEvaluateOnNewDocument 失败: {e}")
+                    fp = get_fingerprint(self.fingerprint_index, os_kind=os_kind)
+                    logger.debug(
+                        f"[{self.label}] Chrome UA={real_ua[:60]!r} → os_kind={os_kind or '(default)'} → fp={fp['name']}"
+                    )
+                stealth_js = generate_stealth_js(fp)
+                # Playwright 的 add_init_script 会通过 CDP Page.addScriptToEvaluateOnNewDocument
+                # 给 context 里所有现有和未来 page 注册。但 init-script 只对下次 navigate/reload
+                # 生效——当前已加载的 document 里的 navigator 还是裸指纹，需要后续 reload。
+                await self._context.add_init_script(stealth_js)
                 logger.info(f"[{self.label}] 已连接 指纹:{fp['name']}")
             except Exception as e:
                 logger.warning(f"[{self.label}] 指纹注入失败: {e}，继续运行")
-                logger.info(f"[{self.label}] 已连接浏览器")
         else:
             logger.info(f"[{self.label}] 已连接浏览器（无 stealth）")
 
@@ -156,33 +163,19 @@ class BrowserSession:
         except Exception:
             pass
 
-        # 关键：如果现有 page 已经 navigate 过真实页面（非 about:blank / chrome://），
-        # reload 一次让 stealth init-script 真正应用到主世界。
-        # 不 reload 的话，UA=Windows 但 platform=Linux 这种冲突指纹会被风控拦下。
+        # 如果 caller 明确要求，在 connect 返回前 reload 一次现有 page，
+        # 让 init-script 立即应用到当前 document（否则只对下次 navigate 生效）。
+        # 用 self._page.reload()（非 CDP Page.reload）：playwright 自己管 frame
+        # lifecycle，只有新 execution context 就绪后才 resolve，caller 第一个
+        # page.evaluate() 不会撞 "Execution context destroyed"。
         if self.stealth and self.reload_on_connect:
             try:
                 cur = self._page.url
                 if cur and not cur.startswith("about:") and not cur.startswith("chrome"):
                     logger.info(f"[{self.label}] reload 现有 page 应用 stealth: {cur[:60]}")
-                    cdp = await self._context.new_cdp_session(self._page)
-                    try:
-                        await cdp.send("Page.reload", {"ignoreCache": True})
-                    finally:
-                        try:
-                            await cdp.detach()
-                        except Exception:
-                            pass
-                    # 给 Chrome 发起导航的时间，再等 DOM 就绪。
-                    # 先短 sleep 让 playwright 追上 frame detach，再 wait_for_load_state，
-                    # 否则 caller 第一个 evaluate 会撞 "Execution context destroyed"。
-                    await asyncio.sleep(1.0)
-                    try:
-                        await self._page.wait_for_load_state("domcontentloaded", timeout=30000)
-                    except Exception as e:
-                        logger.debug(f"[{self.label}] reload wait_for_load_state 超时: {e}")
-                    await asyncio.sleep(0.5)
+                    await self._page.reload(wait_until="domcontentloaded", timeout=15000)
             except Exception as e:
-                logger.warning(f"[{self.label}] reload 失败: {e}，继续运行")
+                logger.warning(f"[{self.label}] reload 失败: {e}（stealth 需等下次 navigate 生效）")
 
     async def disconnect(self) -> None:
         if self._pw:
